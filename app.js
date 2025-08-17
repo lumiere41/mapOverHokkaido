@@ -91,3 +91,7 @@
     el.style.display = "block";
   }
 })();
+
+fetch("./geojsons/Kanto/Tokyo.geojson")
+  .then(res => res.json())
+  .then(data => console.log("Tokyoデータ:", data));
