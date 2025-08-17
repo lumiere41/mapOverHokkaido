@@ -9,7 +9,7 @@
 
 [X（旧Twitter）でよく話題](https://x.com/kitazatosatuki/status/1956343008640856215)になる北海道の大きさを実感できない北海道民以外の方に向けて、地図で比較できるアプリを作ってみたいなと思い、chatGPT君と相談しながら作ってみました。
 
-![screenshot](thumb.png)
+![screenshot](./thumb.png)
 
 ---
 
