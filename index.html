@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>北海道＋全国切り替え地図</title>
+  <title>mapOverHokkaido~北海道に自分の県を重ねてみよう~</title>
   <style>
     body{margin:12px;font-family:system-ui,Meiryo,sans-serif}
     #stage{border:1px solid #ccc;width:100%;height:auto;background:#f7f9f8; touch-action:none;}
@@ -25,14 +25,23 @@
       background: #eee;
       font-weight: bold;
     }
-
+    p.smallCaption{
+      font-size:12px;
+      color:#666;
+      margin:0 0 8px;
+    }
   </style>
   <script src="https://d3js.org/d3.v7.min.js" defer></script>
   <script src="./app.js" defer></script>
 </head>
 <body>
-  <h1 style="font-size:16px;margin:0 0 8px;">北海道＋全国の県を追加</h1>
-
+  <h1 style="font-size:16px;margin:0 0 8px;">mapOverHokkaido~北海道に自分の県を重ねてみよう~</h1>
+  <p class="smallCaption">Map Over Hokkaido: Compare Your Prefecture with Japan’s Northern Giant</p>
+  <p>北海道の上に自分の県を重ねてみることができます。</p>
+  <p>都道府県を選択して「追加」ボタンを押すと、北海道の上に県の形が表示されます。<br>
+  追加した県は、クリックで選択、もう一度クリックすると選択が解除されます。<br>
+  選択した県は「一括削除」ボタンでまとめて削除できます。<br>
+  県の形は、クリック＆ドラッグで移動できます。</p>
 <label for="prefSelect">都道府県を選択:</label>
 <select id="prefSelect"></select>
 <button id="addBtn">追加</button>

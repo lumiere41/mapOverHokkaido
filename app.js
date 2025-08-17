@@ -6,7 +6,6 @@
 
   const W=900, H=650, PAD=20;
 
-  // 都道府県リスト
   const PREFS = {
     Hokkaido: ["Hokkaido"],
     Touhoku: ["Aomori","Iwate","Miyagi","Akita","Yamagata","Fukushima"],
@@ -118,39 +117,47 @@
   }
 
   function clearAllPrefectures(){
-    // 地図上から削除
     gPrefRoot.selectAll("*").remove();
-    // リストから削除
     document.getElementById("addedList").innerHTML = "";
-    // 管理情報リセット
     activePrefectures = {};
     selectedId = null;
   }
 
+  function clearSelection(){
+    selectedId = null;
+    document.querySelectorAll("#addedList li").forEach(li=>{
+      li.classList.remove("selected");
+    });
+    Object.values(activePrefectures).forEach(obj=>{
+      obj.g.select("path").attr("stroke-width", 1);
+    });
+  }
+
   function focusPrefecture(id){
     if(!activePrefectures[id]) return;
-    const { g, data } = activePrefectures[id];
-    selectedId = id;
 
-    // 全liの状態リセット
+    if(selectedId === id){
+      clearSelection();
+      return;
+    }
+
+    selectedId = id;
     document.querySelectorAll("#addedList li").forEach(li=>{
       li.classList.toggle("selected", li.dataset.id===id);
     });
 
-    // 最前面へ
+    const { g, data } = activePrefectures[id];
     g.raise();
 
-    // 北海道中央にリセット
+    Object.entries(activePrefectures).forEach(([pid,obj])=>{
+      obj.g.select("path").attr("stroke-width", pid===id ? 4 : 1);
+    });
+
     const [[x0,y0]] = path.bounds(data);
     const [cx, cy] = path.centroid(hk.features[0]);
     const dx = cx - x0;
     const dy = cy - y0;
     g.attr("transform", `translate(${dx},${dy})`);
-
-    // 枠線更新
-    Object.entries(activePrefectures).forEach(([pid,obj])=>{
-      obj.g.select("path").attr("stroke-width", pid===id ? 4 : 1);
-    });
   }
 
   function addToList(id, name, color){
@@ -160,10 +167,8 @@
     li.textContent = PREFS_JA[name] || name;
     li.style.color = color;
 
-    // 選択でフォーカス
     li.onclick = ()=> focusPrefecture(id);
 
-    // 削除ボタン
     const btn = document.createElement("button");
     btn.textContent = "削除";
     btn.className = "removeBtn";
@@ -176,7 +181,6 @@
     ul.appendChild(li);
   }
 
-  // ズーム/パン
   const zoom = d3.zoom().scaleExtent([0.5,8])
     .on("zoom",ev=> gViewport.attr("transform", ev.transform));
   svg.call(zoom);
@@ -187,9 +191,16 @@
     addPrefecture(region, pref);
   });
 
-  // 一括削除
   document.getElementById("clearBtn").addEventListener("click", ()=>{
     clearAllPrefectures();
+  });
+
+  // SVGの空白クリックで解除（北海道含む）
+  svg.on("click", (ev)=>{
+    const isPref = ev.target.closest("g.pref");
+    if(!isPref){
+      clearSelection();
+    }
   });
 
 })();
