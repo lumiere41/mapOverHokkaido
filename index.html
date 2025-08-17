@@ -1,293 +1,59 @@
 <!doctype html>
 <html lang="ja">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>北海道に都道府県を重ねて遊ぶ（MVP修正版）</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MVP: 北海道だけ正確描画</title>
 <style>
-  :root{ --gap:8px }
-  body{ font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Hiragino Kaku Gothic ProN",Meiryo,sans-serif; margin:12px }
-  header.toolbar{ display:flex; gap:var(--gap); align-items:center; overflow:auto; padding-bottom:8px }
-  .btn{ padding:.42rem .7rem; border:1px solid #999; background:#fff; border-radius:8px; cursor:pointer; white-space:nowrap }
-  .btn:active{ transform:translateY(1px) }
-  select{ padding:.35rem; border-radius:8px; border:1px solid #bbb }
-  .group{ display:flex; gap:var(--gap); align-items:center }
-  .badge{ font-size:12px; color:#444; padding:.2em .5em; border:1px solid #ddd; border-radius:999px; background:#fff }
-  #stage{ border:1px solid #ccc; width:100%; height:auto; touch-action:none; background:#f7f9f8 }
-  .block{ cursor:move; filter:drop-shadow(0 1px 0 rgba(0,0,0,.08)) }
-  .selected{ outline:2px dashed #333; outline-offset:3px }
-  .hint{ font-size:12px; color:#666; margin:.4rem 0 }
-  #toast{ position:fixed; left:12px; right:12px; bottom:12px; padding:.6rem .8rem; border-radius:10px; background:#fff5d6; border:1px solid #e6c97a; color:#533; display:none; z-index:9999 }
+  body{margin:12px;font-family:system-ui,Meiryo,sans-serif}
+  #stage{border:1px solid #ccc;width:100%;height:auto;background:#f7f9f8}
+  #err{color:#a00;font-size:12px;margin-top:.5rem;display:none}
 </style>
 </head>
 <body>
-<header class="toolbar" role="toolbar" aria-label="操作ツールバー">
-  <label>都道府県：
-    <select id="prefSelect" aria-label="都道府県を選択"></select>
-  </label>
-  <button id="addBtn" class="btn">追加</button>
-  <button id="deleteBtn" class="btn">削除</button>
+<h1 style="font-size:16px;margin:0 0 8px;">北海道だけをSVGで描画</h1>
+<svg id="stage" viewBox="0 0 900 650" aria-label="北海道"></svg>
+<p id="err"></p>
 
-  <div class="group" aria-label="全体操作">
-    <span class="badge">全体</span>
-    <button id="viewMinus" class="btn">−</button>
-    <button id="viewPlus"  class="btn">＋</button>
-    <button id="viewReset" class="btn">リセット</button>
-  </div>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script>
+(async function(){
+  const URL = "https://cdn.jsdelivr.net/gh/dataofjapan/land@master/japan.geojson";
+  const svg = d3.select("#stage"), g = svg.append("g");
+  const W=900, H=650, PAD=20;
 
-  <div class="group" aria-label="選択ブロック操作">
-    <span class="badge">選択ブロック</span>
-    <button id="rotL" class="btn">⟲ 回転</button>
-    <button id="rotR" class="btn">⟳ 回転</button>
-  </div>
-</header>
-
-<svg id="stage" viewBox="0 0 900 650" aria-label="北海道ステージ"></svg>
-<p class="hint">操作：一本指スワイプ＝移動、ピンチ＝ズーム、＋/−＝定量ズーム、ブロックはドラッグ移動＆回転のみ（拡大縮小なし）。</p>
-<div id="toast"></div>
-
-<script type="module">
-import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm";
-
-const stage = d3.select("#stage");
-const root = stage.append("g");
-const gViewport = root.append("g");
-const gBase = gViewport.append("g");
-const gBlocks = gViewport.append("g");
-
-const WIDTH = 900, HEIGHT = 650;
-const view = { x:0, y:0, k:1 };
-const GEO_URL = "https://raw.githubusercontent.com/dataofjapan/land/master/prefectures.geojson";
-
-let features = [];
-let byName = new Map();
-let proj, path;
-// ★ 宣言はここだけ：選択中ブロック
-let selected = null;
-
-// -------- フォールバックGeoJSON（超簡易）：北海道＋千葉＋東京＋大阪 --------
-const fallback = {
-  "type":"FeatureCollection",
-  "features":[
-    {"type":"Feature","properties":{"name_ja":"北海道"},"geometry":{"type":"MultiPolygon","coordinates":[[[[141,45],[142,44.3],[145,44.5],[145.7,43.6],[142.8,42.8],[141.0,43.5],[140.5,44.3],[141,45]]]]}},
-    {"type":"Feature","properties":{"name_ja":"千葉県"},"geometry":{"type":"Polygon","coordinates":[[[140.0,35.9],[140.6,35.9],[140.9,35.6],[140.8,35.3],[140.4,35.3],[139.9,35.5],[140.0,35.9]]]}},
-    {"type":"Feature","properties":{"name_ja":"東京都"},"geometry":{"type":"Polygon","coordinates":[[[139.5,35.8],[139.9,35.8],[139.95,35.6],[139.7,35.5],[139.5,35.6],[139.5,35.8]]]}},
-    {"type":"Feature","properties":{"name_ja":"大阪府"},"geometry":{"type":"Polygon","coordinates":[[[135.35,34.8],[135.7,34.8],[135.7,34.5],[135.3,34.5],[135.2,34.7],[135.35,34.8]]]}}
-  ]
-};
-
-const prefSelect = document.getElementById("prefSelect");
-const toast = document.getElementById("toast");
-
-init();
-
-async function init(){
-  // 1) フォールバック即描画
-  loadFromGeoJSON(fallback, /*isFallback=*/true);
-
-  // 2) 47都道府県を取得できたら差し替え
+  let geo;
   try{
-    const geo = await fetch(GEO_URL, {mode:"cors"}).then(r=>{
-      if(!r.ok) throw new Error("HTTP "+r.status);
-      return r.json();
-    });
-    loadFromGeoJSON(geo, /*isFallback=*/false);
-    showToast("47都道府県データを読み込みました。", 2200);
-  }catch(err){
-    console.warn("GeoJSON fetch failed:", err);
-    showToast("ネット取得に失敗：簡易データで表示中（ローカルサーバ推奨）。", 5200);
+    const res = await fetch(URL, {mode:"cors"});
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    geo = await res.json();
+  }catch(e){
+    showErr("GeoJSONの取得に失敗: " + e.message + "（ネット/プロキシ/CORSを確認）");
+    return;
   }
-}
 
-function loadFromGeoJSON(geo){
-  features = geo.features;
-  byName.clear();
+  // 都道府県名の取得（nam_ja を最優先）
+  const nameOf = f => (f.properties?.nam_ja || f.properties?.name_ja || f.properties?.NAME_JA || f.properties?.pref || f.properties?.name || "");
+  const hk = (geo.features || []).find(f => /北海道/.test(nameOf(f)));
+  if(!hk){ showErr("GeoJSON内に『北海道』が見つかりませんでした。"); return; }
 
-  // セレクト更新
-  prefSelect.innerHTML = "";
-  const names = features.map(f=>f.properties.name_ja).sort((a,b)=>a.localeCompare(b,'ja'));
-  for(const n of names){
-    const opt = document.createElement("option"); opt.value=n; opt.textContent=n;
-    prefSelect.appendChild(opt);
-  }
-  features.forEach(f=>byName.set(f.properties.name_ja, f));
+  // 最小構成：メルカトル + fitExtent
+  const proj = d3.geoMercator();
+  proj.fitExtent([[PAD,PAD],[W-PAD,H-PAD]], hk);
+  const path = d3.geoPath(proj);
 
-  // 北海道描画
-  gBase.selectAll("*").remove();
-  const hokkaido = byName.get("北海道");
-  proj = d3.geoMercator().fitSize([WIDTH-40, HEIGHT-40], hokkaido);
-  path = d3.geoPath(proj);
-  gBase.append("path").datum(hokkaido)
-    .attr("d", path).attr("fill","#bfe3bf").attr("stroke","#6a8c6a")
-    .attr("transform","translate(20,20)");
-
-  if (names.includes("千葉県")) prefSelect.value = "千葉県";
-
-  bindUIOnce();
-  applyView();
-}
-
-/* ========= UIイベント ========= */
-function bindUIOnce(){
-  // 二重バインド防止（クローン置換）
-  for (const id of ["addBtn","deleteBtn","rotL","rotR","viewMinus","viewPlus","viewReset"]) {
-    const old = document.getElementById(id);
-    const cloned = old.cloneNode(true);
-    old.parentNode.replaceChild(cloned, old);
-  }
-  document.getElementById("addBtn").onclick    = () => addBlock(prefSelect.value);
-  document.getElementById("deleteBtn").onclick = () => { if(selected){ d3.select(selected).remove(); selected=null; } };
-  document.getElementById("rotL").onclick      = () => { if(!selected) return; selected.__rot = (selected.__rot??0) - 7.5; updateBlockTransform(selected); };
-  document.getElementById("rotR").onclick      = () => { if(!selected) return; selected.__rot = (selected.__rot??0) + 7.5; updateBlockTransform(selected); };
-  document.getElementById("viewPlus").onclick  = () => zoomBy(1.15);
-  document.getElementById("viewMinus").onclick = () => zoomBy(1/1.15);
-  document.getElementById("viewReset").onclick = () => { view.x=0; view.y=0; view.k=1; applyView(); };
-
-  // 余白クリックで選択解除
-  stage.on("mousedown", (ev)=> { if (ev.target === stage.node()) select(null); });
-
-  setupPointerPanZoom();
-}
-
-/* ========= 共通 ========= */
-function showToast(msg, ms=3000){
-  toast.textContent = msg;
-  toast.style.display = "block";
-  clearTimeout(showToast._t);
-  showToast._t = setTimeout(()=> toast.style.display="none", ms);
-}
-
-function applyView(){ gViewport.attr("transform", `translate(${view.x},${view.y}) scale(${view.k})`); }
-function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
-function zoomAt(cx, cy, factor){
-  const vx = (cx - view.x) / view.k, vy = (cy - view.y) / view.k;
-  view.k = clamp(view.k * factor, 0.3, 8);
-  view.x = cx - vx * view.k;
-  view.y = cy - vy * view.k;
-  applyView();
-}
-function zoomBy(f){ zoomAt(WIDTH/2, HEIGHT/2, f); }
-
-/* ========= ブロック（移動＋回転／縮尺固定） ========= */
-function addBlock(name){
-  const feat = byName.get(name);
-  if(!feat){ showToast("選択した都道府県データが見つかりません。"); return; }
-
-  const g = gBlocks.append("g").classed("block", true).attr("tabindex", 0);
-
-  g.append("path").datum(feat)
+  g.append("path")
+    .datum(hk)
     .attr("d", path)
-    .attr("fill","rgba(255,60,60,.55)")
-    .attr("stroke","rgba(120,0,0,.9)")
-    .attr("stroke-width",1.2)
-    .attr("transform","translate(20,20)");
+    .attr("fill", "#bfe3bf")
+    .attr("stroke", "#6a8c6a");
 
-  g.append("text")
-    .text(name.replace(/[都道府県]/g,""))
-    .attr("x",10).attr("y",-10)
-    .attr("font-size","12px").attr("fill","#333");
-
-  g.__x = WIDTH*0.55 + (Math.random()-0.5)*80;
-  g.__y = HEIGHT*0.55 + (Math.random()-0.5)*80;
-  g.__rot = 0;
-  updateBlockTransform(g);
-
-  g.on("mousedown touchstart pointerdown", (ev)=>{
-    ev.stopPropagation();
-    select(g.node());
-    startDrag(ev, g);
-  });
-
-  select(g.node());
-}
-
-function updateBlockTransform(gNode){
-  const g = d3.select(gNode);
-  const x = gNode.__x ?? 0, y = gNode.__y ?? 0, rot = gNode.__rot ?? 0;
-  g.attr("transform", `translate(${x},${y}) rotate(${rot})`);
-}
-
-function select(node){
-  if(selected) d3.select(selected).classed("selected", false);
-  selected = node;
-  if(selected) d3.select(selected).classed("selected", true);
-}
-
-function startDrag(downEvent, g){
-  const start = { x:g.__x, y:g.__y };
-  const p0 = svgPoint(downEvent.clientX ?? (downEvent.touches?.[0]?.clientX),
-                      downEvent.clientY ?? (downEvent.touches?.[0]?.clientY));
-  function move(ev){
-    const cx = ev.clientX ?? (ev.touches?.[0]?.clientX);
-    const cy = ev.clientY ?? (ev.touches?.[0]?.clientY);
-    const p = svgPoint(cx, cy);
-    g.__x = start.x + (p.x - p0.x);
-    g.__y = start.y + (p.y - p0.y);
-    updateBlockTransform(g);
+  function showErr(msg){
+    const el = document.getElementById("err");
+    el.textContent = msg;
+    el.style.display = "block";
   }
-  function up(){
-    window.removeEventListener("mousemove", move, {passive:false});
-    window.removeEventListener("mouseup", up);
-    window.removeEventListener("touchmove", move, {passive:false});
-    window.removeEventListener("touchend", up);
-  }
-  window.addEventListener("mousemove", move, {passive:false});
-  window.addEventListener("mouseup", up);
-  window.addEventListener("touchmove", move, {passive:false});
-  window.addEventListener("touchend", up);
-}
-
-function svgPoint(clientX, clientY){
-  const pt = stage.node().createSVGPoint(); pt.x = clientX; pt.y = clientY;
-  const m = stage.node().getScreenCTM().inverse();
-  return pt.matrixTransform(m);
-}
-
-/* ========= ステージ：一本指パン＋ピンチズーム（Pointer Events） ========= */
-function setupPointerPanZoom(){
-  const pointers = new Map();
-  let startPan = null, lastPinchDist = null;
-
-  stage.on("pointerdown", (ev)=>{
-    stage.node().setPointerCapture(ev.pointerId);
-    pointers.set(ev.pointerId, {x:ev.clientX, y:ev.clientY});
-    if(pointers.size===1) startPan = { x:view.x, y:view.y, p:{x:ev.clientX, y:ev.clientY} };
-  });
-
-  stage.on("pointermove", (ev)=>{
-    if(!pointers.has(ev.pointerId)) return;
-    pointers.set(ev.pointerId, {x:ev.clientX, y:ev.clientY});
-
-    if(pointers.size===1 && startPan){
-      const p = pointers.values().next().value;
-      view.x = startPan.x + (p.x - startPan.p.x);
-      view.y = startPan.y + (p.y - startPan.p.y);
-      applyView();
-    } else if(pointers.size===2){
-      const pts = [...pointers.values()];
-      const d = Math.hypot(pts[0].x-pts[1].x, pts[0].y-pts[1].y);
-      const c = { x:(pts[0].x+pts[1].x)/2, y:(pts[0].y+pts[1].y)/2 };
-      if(lastPinchDist){
-        const factor = d / lastPinchDist;
-        zoomAt(c.x, c.y, factor);
-      }
-      lastPinchDist = d;
-    }
-  });
-
-  stage.on("pointerup pointercancel", (ev)=>{
-    pointers.delete(ev.pointerId);
-    if(pointers.size<2) lastPinchDist = null;
-    if(pointers.size===0) startPan = null;
-  });
-
-  // PCホイールズーム
-  stage.on("wheel", (ev)=>{
-    ev.preventDefault();
-    const factor = ev.deltaY < 0 ? 1.12 : 1/1.12;
-    zoomAt(ev.clientX, ev.clientY, factor);
-  }, {passive:false});
-}
+})();
 </script>
 </body>
 </html>
