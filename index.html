@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>北海道に都道府県を重ねて遊ぶ（MVP）</title>
+<style>
+  :root{ --gap:8px }
+  body{ font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Hiragino Kaku Gothic ProN", Meiryo, sans-serif; margin:12px }
+  header.toolbar{ display:flex; gap:var(--gap); align-items:center; overflow:auto; padding-bottom:8px }
+  .btn{ padding:.42rem .7rem; border:1px solid #999; background:#fff; border-radius:8px; cursor:pointer; white-space:nowrap }
+  .btn:active{ transform:translateY(1px) }
+  select{ padding:.35rem; border-radius:8px; border:1px solid #bbb }
+  .group{ display:flex; gap:var(--gap); align-items:center }
+  .badge{ font-size:12px; color:#444; padding:.2em .5em; border:1px solid #ddd; border-radius:999px; background:#fff }
+  #stage{ border:1px solid #ccc; width:100%; height:auto; touch-action:none; background:#f7f9f8 }
+  .block{ cursor:move; filter:drop-shadow(0 1px 0 rgba(0,0,0,.08)) }
+  .selected{ outline:2px dashed #333; outline-offset:3px }
+  .hint{ font-size:12px; color:#666; margin:.4rem 0 }
+</style>
+</head>
+<body>
+<header class="toolbar">
+  <label>都道府県：
+    <select id="prefSelect" aria-label="都道府県を選択"></select>
+  </label>
+  <button id="addBtn" class="btn">追加</button>
+  <button id="deleteBtn" class="btn">削除</button>
+
+  <div class="group">
+    <span class="badge">全体</span>
+    <button id="viewMinus" class="btn">−</button>
+    <button id="viewPlus"  class="btn">＋</button>
+    <button id="viewReset" class="btn">リセット</button>
+  </div>
+
+  <div class="group">
+    <span class="badge">選択ブロック</span>
+    <button id="rotL" class="btn">⟲ 回転</button>
+    <button id="rotR" class="btn">⟳ 回転</button>
+  </div>
+</header>
+
+<svg id="stage" viewBox="0 0 900 650" aria-label="北海道ステージ"></svg>
+<p class="hint">操作：一本指スワイプ＝移動、ピンチ＝ズーム、＋/−＝定量ズーム、ブロックはドラッグ移動＆回転ボタンのみ（拡大縮小なし）。</p>
+
+<script type="module">
+import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm";
+
+const GEO_URL = "https://raw.githubusercontent.com/dataofjapan/land/master/prefectures.geojson";
+const stage = d3.select("#stage");
+
+// ルート：全体ズーム/パン用
+const root = stage.append("g");
+const gViewport = root.append("g");
+const gBase = gViewport.append("g");   // 北海道
+const gBlocks = gViewport.append("g"); // 県ブロック群
+
+const WIDTH = 900, HEIGHT = 650;
+const view = { x:0, y:0, k:1 };
+function applyView(){ gViewport.attr("transform", `translate(${view.x},${view.y}) scale(${view.k})`); }
+function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
+function zoomAt(cx, cy, factor){
+  const vx = (cx - view.x) / view.k, vy = (cy - view.y) / view.k;
+  view.k = clamp(view.k * factor, 0.3, 8);
+  view.x = cx - vx * view.k;
+  view.y = cy - vy * view.k;
+  applyView();
+}
+function zoomBy(f){ zoomAt(WIDTH/2, HEIGHT/2, f); }
+
+let features = [];
+let byName = new Map();
+let proj, path;
+let selected = null;
+
+const prefSelect = document.getElementById("prefSelect");
+
+init();
+
+async function init(){
+  const geo = await (await fetch(GEO_URL)).json();
+  features = geo.features;
+
+  // セレクトを作成（日本語名）
+  const names = features.map(f => f.properties.name_ja).sort((a,b)=>a.localeCompare(b,'ja'));
+  for(const n of names){
+    const opt = document.createElement("option"); opt.value = n; opt.textContent = n;
+    prefSelect.appendChild(opt);
+  }
+  features.forEach(f => byName.set(f.properties.name_ja, f));
+
+  // 北海道を背景に
+  const hokkaido = byName.get("北海道");
+  proj = d3.geoMercator().fitSize([WIDTH-40, HEIGHT-40], hokkaido);
+  path = d3.geoPath(proj);
+  gBase.append("path")
+    .datum(hokkaido)
+    .attr("d", path)
+    .attr("fill", "#bfe3bf")
+    .attr("stroke", "#6a8c6a")
+    .attr("transform","translate(20,20)");
+
+  // 初期選択を千葉に（任意）
+  if (names.includes("千葉県")) prefSelect.value = "千葉県";
+
+  // 追加・削除・回転ボタン
+  document.getElementById("addBtn").onclick = () => addBlock(prefSelect.value);
+  document.getElementById("deleteBtn").onclick = () => { if(selected){ d3.select(selected).remove(); selected=null; } };
+  document.getElementById("rotL").onclick = () => { if(!selected) return; selected.__rot = (selected.__rot??0) - 7.5; updateBlockTransform(selected); };
+  document.getElementById("rotR").onclick = () => { if(!selected) return; selected.__rot = (selected.__rot??0) + 7.5; updateBlockTransform(selected); };
+
+  // 全体ズームボタン
+  document.getElementById("viewPlus").onclick  = ()=> zoomBy(1.15);
+  document.getElementById("viewMinus").onclick = ()=> zoomBy(1/1.15);
+  document.getElementById("viewReset").onclick = ()=> { view.x=0; view.y=0; view.k=1; applyView(); };
+
+  // ステージ空白クリックで選択解除
+  stage.on("mousedown", (ev)=> { if (ev.target === stage.node()) select(null); });
+  applyView();
+  setupPointerPanZoom(); // ピンチ + ドラッグ
+}
+
+/* ==== 県ブロック ==== */
+function addBlock(name){
+  const feat = byName.get(name);
+  if(!feat) return;
+
+  const g = gBlocks.append("g").classed("block", true).attr("tabindex", 0);
+  // 県の形状（北海道と同じ投影＆同スケール＝縮尺は常に正確）
+  g.append("path")
+    .datum(feat)
+    .attr("d", path)
+    .attr("fill", "rgba(255,60,60,.55)")
+    .attr("stroke", "rgba(120,0,0,.9)")
+    .attr("stroke-width", 1.2)
+    .attr("transform","translate(20,20)");
+
+  // ラベル（短縮表示）
+  g.append("text")
+    .text(name.replace("都","").replace("道","").replace("府","").replace("県",""))
+    .attr("x", 10).attr("y", -10)
+    .attr("font-size","12px").attr("fill","#333");
+
+  // 初期位置＝ステージ中央付近（少し散らす）
+  g.__x = WIDTH*0.55 + (Math.random()-0.5)*80;
+  g.__y = HEIGHT*0.55 + (Math.random()-0.5)*80;
+  g.__rot = 0;
+  updateBlockTransform(g);
+
+  // ブロックのドラッグ（選択も）
+  g.on("mousedown touchstart pointerdown", (ev)=>{ ev.stopPropagation(); select(g.node()); startDrag(ev, g); });
+  select(g.node());
+}
+
+function updateBlockTransform(gNode){
+  const g = d3.select(gNode);
+  const x = gNode.__x ?? 0, y = gNode.__y ?? 0;
+  const rot = gNode.__rot ?? 0;
+  g.attr("transform", `translate(${x},${y}) rotate(${rot})`);
+}
+
+function select(node){
+  if(selected) d3.select(selected).classed("selected", false);
+  selected = node;
+  if(selected) d3.select(selected).classed("selected", true);
+}
+
+// ブロックのドラッグ（画面座標→SVG座標）
+function startDrag(downEvent, g){
+  const start = { x:g.__x, y:g.__y };
+  const p0 = svgPoint(downEvent.clientX ?? (downEvent.touches?.[0]?.clientX), downEvent.clientY ?? (downEvent.touches?.[0]?.clientY));
+  function move(ev){
+    const cx = ev.clientX ?? (ev.touches?.[0]?.clientX);
+    const cy = ev.clientY ?? (ev.touches?.[0]?.clientY);
+    const p = svgPoint(cx, cy);
+    g.__x = start.x + (p.x - p0.x);
+    g.__y = start.y + (p.y - p0.y);
+    updateBlockTransform(g);
+  }
+  function up(){
+    window.removeEventListener("mousemove", move, {passive:false});
+    window.removeEventListener("mouseup", up);
+    window.removeEventListener("touchmove", move, {passive:false});
+    window.removeEventListener("touchend", up);
+  }
+  window.addEventListener("mousemove", move, {passive:false});
+  window.addEventListener("mouseup", up);
+  window.addEventListener("touchmove", move, {passive:false});
+  window.addEventListener("touchend", up);
+}
+
+function svgPoint(clientX, clientY){
+  const pt = stage.node().createSVGPoint(); pt.x = clientX; pt.y = clientY;
+  const m = stage.node().getScreenCTM().inverse();
+  return pt.matrixTransform(m);
+}
+
+/* ==== ステージ：一本指パン＋ピンチズーム（Pointer Events） ==== */
+function setupPointerPanZoom(){
+  const pointers = new Map();
+  let startPan = null, lastPinchDist = null;
+
+  stage.on("pointerdown", (ev)=>{
+    // ブロックに届いたpointerdownは stopPropagation 済み
+    stage.node().setPointerCapture(ev.pointerId);
+    pointers.set(ev.pointerId, {x:ev.clientX, y:ev.clientY});
+    if(pointers.size===1) startPan = { x:view.x, y:view.y, p:{x:ev.clientX, y:ev.clientY} };
+  });
+
+  stage.on("pointermove", (ev)=>{
+    if(!pointers.has(ev.pointerId)) return;
+    pointers.set(ev.pointerId, {x:ev.clientX, y:ev.clientY});
+
+    if(pointers.size===1 && startPan){
+      const p = pointers.values().next().value;
+      view.x = startPan.x + (p.x - startPan.p.x);
+      view.y = startPan.y + (p.y - startPan.p.y);
+      applyView();
+    } else if (pointers.size===2){
+      const pts = [...pointers.values()];
+      const d = Math.hypot(pts[0].x-pts[1].x, pts[0].y-pts[1].y);
+      const c = { x:(pts[0].x+pts[1].x)/2, y:(pts[0].y+pts[1].y)/2 };
+      if(lastPinchDist){
+        const factor = d / lastPinchDist;
+        zoomAt(c.x, c.y, factor);
+      }
+      lastPinchDist = d;
+    }
+  });
+
+  stage.on("pointerup pointercancel", (ev)=>{
+    pointers.delete(ev.pointerId);
+    if(pointers.size<2) lastPinchDist = null;
+    if(pointers.size===0) startPan = null;
+  });
+
+  // マウスホイールでもズーム（PC向け）
+  stage.on("wheel", (ev)=>{
+    ev.preventDefault();
+    const factor = ev.deltaY < 0 ? 1.12 : 1/1.12;
+    zoomAt(ev.clientX, ev.clientY, factor);
+  }, {passive:false});
+}
+</script>
+</body>
+</html>
