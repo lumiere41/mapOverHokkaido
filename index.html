@@ -1,59 +1,20 @@
 <!doctype html>
 <html lang="ja">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>MVP: 北海道だけ正確描画</title>
-<style>
-  body{margin:12px;font-family:system-ui,Meiryo,sans-serif}
-  #stage{border:1px solid #ccc;width:100%;height:auto;background:#f7f9f8}
-  #err{color:#a00;font-size:12px;margin-top:.5rem;display:none}
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>MVP: 北海道だけ正確描画</title>
+  <style>
+    body{margin:12px;font-family:system-ui,Meiryo,sans-serif}
+    #stage{border:1px solid #ccc;width:100%;height:auto;background:#f7f9f8}
+    #err{color:#a00;font-size:12px;margin-top:.5rem;display:none}
+  </style>
+  <script src="https://d3js.org/d3.v7.min.js" defer></script>
+  <script src="./app.js" defer></script>
 </head>
 <body>
-<h1 style="font-size:16px;margin:0 0 8px;">北海道だけをSVGで描画</h1>
-<svg id="stage" viewBox="0 0 900 650" aria-label="北海道"></svg>
-<p id="err"></p>
-
-<script src="https://d3js.org/d3.v7.min.js"></script>
-<script>
-(async function(){
-  const URL = "https://cdn.jsdelivr.net/gh/dataofjapan/land@master/japan.geojson";
-  const svg = d3.select("#stage"), g = svg.append("g");
-  const W=900, H=650, PAD=20;
-
-  let geo;
-  try{
-    const res = await fetch(URL, {mode:"cors"});
-    if(!res.ok) throw new Error("HTTP "+res.status);
-    geo = await res.json();
-  }catch(e){
-    showErr("GeoJSONの取得に失敗: " + e.message + "（ネット/プロキシ/CORSを確認）");
-    return;
-  }
-
-  // 都道府県名の取得（nam_ja を最優先）
-  const nameOf = f => (f.properties?.nam_ja || f.properties?.name_ja || f.properties?.NAME_JA || f.properties?.pref || f.properties?.name || "");
-  const hk = (geo.features || []).find(f => /北海道/.test(nameOf(f)));
-  if(!hk){ showErr("GeoJSON内に『北海道』が見つかりませんでした。"); return; }
-
-  // 最小構成：メルカトル + fitExtent
-  const proj = d3.geoMercator();
-  proj.fitExtent([[PAD,PAD],[W-PAD,H-PAD]], hk);
-  const path = d3.geoPath(proj);
-
-  g.append("path")
-    .datum(hk)
-    .attr("d", path)
-    .attr("fill", "#bfe3bf")
-    .attr("stroke", "#6a8c6a");
-
-  function showErr(msg){
-    const el = document.getElementById("err");
-    el.textContent = msg;
-    el.style.display = "block";
-  }
-})();
-</script>
+  <h1 style="font-size:16px;margin:0 0 8px;">北海道だけをSVGで描画</h1>
+  <svg id="stage" viewBox="0 0 900 650" aria-label="北海道"></svg>
+  <p id="err"></p>
 </body>
 </html>
