@@ -6,7 +6,6 @@
 
   const W=900, H=650, PAD=20;
 
-  // ---- 都道府県リスト（地方ごと） ----
   const PREFS = {
     Hokkaido: ["Hokkaido"],
     Touhoku: ["Aomori","Iwate","Miyagi","Akita","Yamagata","Fukushima"],
@@ -19,7 +18,6 @@
     Okinawa: ["Okinawa"]
   };
 
-  // 日本語表記マップ
   const PREFS_JA = {
     Hokkaido:"北海道",
     Aomori:"青森県",Iwate:"岩手県",Miyagi:"宮城県",Akita:"秋田県",Yamagata:"山形県",Fukushima:"福島県",
@@ -33,7 +31,7 @@
     Miyazaki:"宮崎県",Kagoshima:"鹿児島県",Okinawa:"沖縄県"
   };
 
-  // ---- セレクトボックス自動生成 ----
+  // セレクト自動生成
   const select = document.getElementById("prefSelect");
   for (const [region, prefs] of Object.entries(PREFS)) {
     const group = document.createElement("optgroup");
@@ -47,14 +45,13 @@
     select.appendChild(group);
   }
 
-  // ---- データロード関数 ----
   async function loadGeoJSON(path){
     const res = await fetch(path);
     if(!res.ok) throw new Error("HTTP "+res.status);
     return await res.json();
   }
 
-  // ---- 北海道データ描画 ----
+  // 北海道
   const hk = await loadGeoJSON("./geojsons/Hokkaido/Hokkaido.geojson");
   const proj = d3.geoMercator().fitExtent([[PAD,PAD],[W-PAD,H-PAD]], hk);
   const path = d3.geoPath(proj);
@@ -64,8 +61,7 @@
       .attr("fill", "#bfe3bf")
       .attr("stroke", "#6a8c6a");
 
-  // ---- 県ごとに保持する管理オブジェクト ----
-  let activePrefectures = {}; // { Tokyo: { g, color } }
+  let activePrefectures = {};
 
   function randomColor(){
     const h = Math.floor(Math.random()*360);
@@ -73,7 +69,7 @@
   }
 
   async function addPrefecture(region, name){
-    if(activePrefectures[name]) return; // 重複防止
+    if(activePrefectures[name]) return;
 
     const data = await loadGeoJSON(`./geojsons/${region}/${name}.geojson`);
     const color = randomColor();
@@ -84,6 +80,7 @@
       .datum(data.features[0])
       .attr("d", path)
       .attr("fill", color)
+      .attr("fill-opacity", 0.5)   // ★透明度50%
       .attr("stroke", "black")
       .attr("stroke-width", 1);
 
@@ -95,8 +92,7 @@
 
     const [cx, cy] = path.centroid(hk.features[0]);
     let dx = cx - x0, dy = cy - y0;
-    g.attr("transform",`translate(${dx},${dy})`)
-     .style("cursor","move");
+    g.attr("transform",`translate(${dx},${dy})`).style("cursor","move");
 
     g.call(d3.drag().on("drag",(ev)=>{
       const k = d3.zoomTransform(svg.node()).k;
@@ -105,11 +101,8 @@
       g.attr("transform",`translate(${dx},${dy})`);
     }));
 
-    // 管理オブジェクトに追加
-    activePrefectures[name] = { g, color };
-
-    // リストに追加
-    addToList(name);
+    activePrefectures[name] = { g, color, data: data.features[0] };
+    addToList(name, color);
   }
 
   function removePrefecture(name){
@@ -119,28 +112,48 @@
     document.querySelector(`#addedList li[data-name='${name}']`).remove();
   }
 
-  function addToList(name){
+  function focusPrefecture(name){
+    if(!activePrefectures[name]) return;
+    const { g, data } = activePrefectures[name];
+
+    // 最前面に移動
+    g.raise();
+
+    // 北海道の中心にリセット
+    const [[x0,y0]] = path.bounds(data);
+    const [cx, cy] = path.centroid(hk.features[0]);
+    const dx = cx - x0;
+    const dy = cy - y0;
+    g.attr("transform", `translate(${dx},${dy})`);
+  }
+
+  function addToList(name, color){
     const ul = document.getElementById("addedList");
     const li = document.createElement("li");
     li.setAttribute("data-name", name);
     li.textContent = PREFS_JA[name] || name;
+    li.style.color = color;
+
+    // 県名クリックでフォーカス
+    li.onclick = () => focusPrefecture(name);
 
     // 削除ボタン
     const btn = document.createElement("button");
     btn.textContent = "削除";
     btn.className = "removeBtn";
-    btn.onclick = ()=> removePrefecture(name);
+    btn.onclick = (ev)=> {
+      ev.stopPropagation(); // 県名クリックと競合しないように
+      removePrefecture(name);
+    };
 
     li.appendChild(btn);
     ul.appendChild(li);
   }
 
-  // ---- ズーム/パン ----
   const zoom = d3.zoom().scaleExtent([0.5,8])
     .on("zoom",ev=> gViewport.attr("transform", ev.transform));
   svg.call(zoom);
 
-  // ---- 追加ボタンイベント ----
   document.getElementById("addBtn").addEventListener("click", ()=>{
     const pref = select.value;
     const region = Object.keys(PREFS).find(r=>PREFS[r].includes(pref));
