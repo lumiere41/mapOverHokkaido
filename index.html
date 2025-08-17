@@ -4,53 +4,42 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>mapOverHokkaido~北海道に自分の県を重ねてみよう~</title>
-  <style>
-    body{margin:12px;font-family:system-ui,Meiryo,sans-serif}
-    #stage{border:1px solid #ccc;width:100%;height:auto;background:#f7f9f8; touch-action:none;}
-    #err{color:#a00;font-size:12px;margin-top:.5rem;display:none}
-    label, select, button { font-size:14px; margin:0 4px 12px 0; }
-    #addedList { margin-top:1em; padding:0; list-style:none; }
-    #addedList li { margin:4px 0; }
-    .removeBtn {
-      margin-left:8px;
-      font-size:12px;
-      cursor:pointer;
-      color:#fff;
-      background:#a33;
-      border:none;
-      border-radius:4px;
-      padding:2px 6px;
-    }
-    #addedList li.selected {
-      background: #eee;
-      font-weight: bold;
-    }
-    p.smallCaption{
-      font-size:12px;
-      color:#666;
-      margin:0 0 8px;
-    }
-  </style>
   <script src="https://d3js.org/d3.v7.min.js" defer></script>
   <script src="./app.js" defer></script>
+  <link rel="stylesheet" href="index.css"/>
 </head>
 <body>
-  <h1 style="font-size:16px;margin:0 0 8px;">mapOverHokkaido~北海道に自分の県を重ねてみよう~</h1>
-  <p class="smallCaption">Map Over Hokkaido: Compare Your Prefecture with Japan’s Northern Giant</p>
-  <p>北海道の上に自分の県を重ねてみることができます。</p>
-  <p>都道府県を選択して「追加」ボタンを押すと、北海道の上に県の形が表示されます。<br>
-  追加した県は、クリックで選択、もう一度クリックすると選択が解除されます。<br>
-  選択した県は「一括削除」ボタンでまとめて削除できます。<br>
-  県の形は、クリック＆ドラッグで移動できます。</p>
-<label for="prefSelect">都道府県を選択:</label>
-<select id="prefSelect"></select>
-<button id="addBtn">追加</button>
-<button id="clearBtn">一括削除</button>
+  <div class="titleBlock">
+    <h1>mapOverHokkaido ～北海道に自分の県を重ねてみよう～</h1>
+    <p class="smallCaption">Map Over Hokkaido: Compare Your Prefecture with Japan’s Northern Giant</p>
+  </div>
+  <div class="howtoBlock">
+    <p>北海道の上に自分の県を重ねて<span>北海道の大きさを地図で実感</span>することができます。</p>
+    <p>都道府県を選択して「追加」ボタンを押すと、北海道の上に県の形が表示されます。<br>
+    追加した県は、クリックで選択、もう一度クリックすると選択が解除されます。<br>
+    選択した県は「一括削除」ボタンでまとめて削除できます。県の形は、クリック＆ドラッグで移動できます。</p>
+  </div>
+  
+  <div class="flexBox">
+    <div id="map">
+      <div class="menuBlock">
+        <div class="menuBlockWrap">
+          <label class="att" for="prefSelect">ここから都道府県を選択▶</label>
+          <select id="prefSelect"></select>
+          <button id="addBtn">追加</button>
+          <button id="clearBtn">一括削除</button>
+        </div>
+      </div>
+      <svg id="stage" viewBox="0 0 900 650" aria-label="北海道と各県"></svg>
+    </div>
 
-  <svg id="stage" viewBox="0 0 900 650" aria-label="北海道と各県"></svg>
+    <div id="list">
+      <h2>設置済みの県</h2>
+      <ul id="addedList"></ul>
+    </div>
+  </div>
+
   <p id="err"></p>
 
-  <h2 style="font-size:14px;margin-top:1em;">設置済みの県</h2>
-  <ul id="addedList"></ul>
 </body>
 </html>
