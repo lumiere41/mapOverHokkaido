@@ -4,16 +4,15 @@
 - こんにちは、道産子のlumiere41です。
 「mapOverHokkaido」は、北海道の地図の上に自分の県を重ねて、
 北海道の大きさを直感的に比較できるブラウザアプリケーションです。
+
 ![screenshot](./thumb.png)
 
-- * こちらのサイトの北海道対他県比較版のようなものです。
-- 参考出展：  [『The True Size Of …』](https://thetruesize.com/#?borders=1~!MTUwODI3NzA.MjU4OTMxNg*MzIwMTQxMTY(NzM4NzE2Mw~!CONTIGUOUS_US*MTAwMjQwNzU.MjUwMjM1MTc(MTc1)MQ~!IN*NTI2NDA1MQ.Nzg2MzQyMQ)Mg~!CN*OTkyMTY5Nw.NzMxNDcwNQ(MjI1)Mw)
+- こちらのサイトの北海道対他県比較版のようなものです。
+参考出展：  [『The True Size Of …』](https://thetruesize.com/#?borders=1~!MTUwODI3NzA.MjU4OTMxNg*MzIwMTQxMTY(NzM4NzE2Mw~!CONTIGUOUS_US*MTAwMjQwNzU.MjUwMjM1MTc(MTc1)MQ~!IN*NTI2NDA1MQ.Nzg2MzQyMQ)Mg~!CN*OTkyMTY5Nw.NzMxNDcwNQ(MjI1)Mw)
 
 - 元データは [国土数値情報（国土交通省）](https://nlftp.mlit.go.jp/ksj/) を利用しています。
 
--[X（旧Twitter）でよく話題](https://x.com/kitazatosatuki/status/1956343008640856215)になる北海道の大きさを実感できない北海道民以外の方に向けて、地図で比較できるアプリを作ってみたいなと思い、chatGPT君と相談しながら作ってみました。
-
----
+- [X（旧Twitter）でよく話題](https://x.com/kitazatosatuki/status/1956343008640856215)になる北海道の大きさを実感できない北海道民以外の方に向けて、地図で比較できるアプリを作ってみたいなと思い、chatGPT君と相談しながら作ってみました。
 
 <!-- ## デモURL
 
