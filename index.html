@@ -10,7 +10,7 @@
 </head>
 <body>
   <div class="titleBlock">
-    <h1>mapOverHokkaido ～北海道に自分の県を重ねてみよう～</h1>
+    <h1>mapOverHokkaido<br class="pc-none"> ～北海道に自分の県を重ねてみよう～</h1>
     <p class="smallCaption">Map Over Hokkaido: Compare Your Prefecture with Japan’s Northern Giant</p>
   </div>
   <div class="howtoBlock">
@@ -24,13 +24,15 @@
     <div id="map">
       <div class="menuBlock">
         <div class="menuBlockWrap">
-          <label class="att" for="prefSelect">ここから都道府県を選択▶</label>
+          <label class="att" for="prefSelect">ここから都道府県を選択：</label>
           <select id="prefSelect"></select>
           <button id="addBtn">追加</button>
-          <button id="clearBtn">一括削除</button>
         </div>
       </div>
       <svg id="stage" viewBox="0 0 900 650" aria-label="北海道と各県"></svg>
+      <div class="btmBlock">
+        <button id="clearBtn">一括削除</button>
+      </div>
     </div>
 
     <div id="list">
