@@ -1,11 +1,12 @@
 (async function(){
   const svg       = d3.select("#stage");
-  const gViewport = svg.append("g");                         
-  const gBase     = gViewport.append("g").attr("id","hokkaido"); 
-  const gPrefRoot = gViewport.append("g").attr("id","prefRoot");    
+  const gViewport = svg.append("g");
+  const gBase     = gViewport.append("g").attr("id","hokkaido");
+  const gPrefRoot = gViewport.append("g").attr("id","prefRoot");
 
   const W=900, H=650, PAD=20;
 
+  // 都道府県リスト
   const PREFS = {
     Hokkaido: ["Hokkaido"],
     Touhoku: ["Aomori","Iwate","Miyagi","Akita","Yamagata","Fukushima"],
@@ -31,7 +32,7 @@
     Miyazaki:"宮崎県",Kagoshima:"鹿児島県",Okinawa:"沖縄県"
   };
 
-  // セレクト自動生成
+  // セレクトボックス自動生成
   const select = document.getElementById("prefSelect");
   for (const [region, prefs] of Object.entries(PREFS)) {
     const group = document.createElement("optgroup");
@@ -51,7 +52,7 @@
     return await res.json();
   }
 
-  // 北海道
+  // 北海道の描画
   const hk = await loadGeoJSON("./geojsons/Hokkaido/Hokkaido.geojson");
   const proj = d3.geoMercator().fitExtent([[PAD,PAD],[W-PAD,H-PAD]], hk);
   const path = d3.geoPath(proj);
@@ -61,7 +62,10 @@
       .attr("fill", "#bfe3bf")
       .attr("stroke", "#6a8c6a");
 
-  let activePrefectures = {};
+  // 管理用
+  let counter = 0;
+  let activePrefectures = {}; // { id: { g, name, color, data } }
+  let selectedId = null;
 
   function randomColor(){
     const h = Math.floor(Math.random()*360);
@@ -69,18 +73,18 @@
   }
 
   async function addPrefecture(region, name){
-    if(activePrefectures[name]) return;
-
+    counter++;
+    const id = `${name}_${counter}`;
     const data = await loadGeoJSON(`./geojsons/${region}/${name}.geojson`);
     const color = randomColor();
 
-    const g = gPrefRoot.append("g").attr("class","pref").attr("data-name",name);
+    const g = gPrefRoot.append("g").attr("class","pref").attr("data-id",id);
 
     g.append("path")
       .datum(data.features[0])
       .attr("d", path)
       .attr("fill", color)
-      .attr("fill-opacity", 0.5)   // ★透明度50%
+      .attr("fill-opacity", 0.5)
       .attr("stroke", "black")
       .attr("stroke-width", 1);
 
@@ -101,55 +105,68 @@
       g.attr("transform",`translate(${dx},${dy})`);
     }));
 
-    activePrefectures[name] = { g, color, data: data.features[0] };
-    addToList(name, color);
+    activePrefectures[id] = { g, name, color, data: data.features[0] };
+    addToList(id, name, color);
   }
 
-  function removePrefecture(name){
-    if(!activePrefectures[name]) return;
-    activePrefectures[name].g.remove();
-    delete activePrefectures[name];
-    document.querySelector(`#addedList li[data-name='${name}']`).remove();
+  function removePrefecture(id){
+    if(!activePrefectures[id]) return;
+    activePrefectures[id].g.remove();
+    delete activePrefectures[id];
+    document.querySelector(`#addedList li[data-id='${id}']`).remove();
+    if(selectedId === id) selectedId = null;
   }
 
-  function focusPrefecture(name){
-    if(!activePrefectures[name]) return;
-    const { g, data } = activePrefectures[name];
+  function focusPrefecture(id){
+    if(!activePrefectures[id]) return;
+    const { g, data } = activePrefectures[id];
+    selectedId = id;
 
-    // 最前面に移動
+    // 全liの状態リセット
+    document.querySelectorAll("#addedList li").forEach(li=>{
+      li.classList.toggle("selected", li.dataset.id===id);
+    });
+
+    // 最前面へ
     g.raise();
 
-    // 北海道の中心にリセット
+    // 北海道中央にリセット
     const [[x0,y0]] = path.bounds(data);
     const [cx, cy] = path.centroid(hk.features[0]);
     const dx = cx - x0;
     const dy = cy - y0;
     g.attr("transform", `translate(${dx},${dy})`);
+
+    // 枠線更新
+    Object.entries(activePrefectures).forEach(([pid,obj])=>{
+      obj.g.select("path").attr("stroke-width", pid===id ? 4 : 1);
+    });
   }
 
-  function addToList(name, color){
+  function addToList(id, name, color){
     const ul = document.getElementById("addedList");
     const li = document.createElement("li");
-    li.setAttribute("data-name", name);
+    li.setAttribute("data-id", id);
     li.textContent = PREFS_JA[name] || name;
     li.style.color = color;
 
-    // 県名クリックでフォーカス
-    li.onclick = () => focusPrefecture(name);
+    // 選択でフォーカス
+    li.onclick = ()=> focusPrefecture(id);
 
     // 削除ボタン
     const btn = document.createElement("button");
     btn.textContent = "削除";
     btn.className = "removeBtn";
     btn.onclick = (ev)=> {
-      ev.stopPropagation(); // 県名クリックと競合しないように
-      removePrefecture(name);
+      ev.stopPropagation();
+      removePrefecture(id);
     };
 
     li.appendChild(btn);
     ul.appendChild(li);
   }
 
+  // ズーム/パン
   const zoom = d3.zoom().scaleExtent([0.5,8])
     .on("zoom",ev=> gViewport.attr("transform", ev.transform));
   svg.call(zoom);
