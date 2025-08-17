@@ -241,3 +241,15 @@ body {
     }
 
 }
+.exhibit{
+    margin-top: 8px;
+}
+.exhibit,.copyright{
+text-align: center;
+font-size:12px;
+color:#666;
+}
+
+.copyright a{
+color:#0056b3;
+}
