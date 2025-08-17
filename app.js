@@ -32,7 +32,7 @@
     Miyazaki:"宮崎県",Kagoshima:"鹿児島県",Okinawa:"沖縄県"
   };
 
-  // セレクトボックス自動生成
+  // セレクト自動生成
   const select = document.getElementById("prefSelect");
   for (const [region, prefs] of Object.entries(PREFS)) {
     const group = document.createElement("optgroup");
@@ -117,6 +117,16 @@
     if(selectedId === id) selectedId = null;
   }
 
+  function clearAllPrefectures(){
+    // 地図上から削除
+    gPrefRoot.selectAll("*").remove();
+    // リストから削除
+    document.getElementById("addedList").innerHTML = "";
+    // 管理情報リセット
+    activePrefectures = {};
+    selectedId = null;
+  }
+
   function focusPrefecture(id){
     if(!activePrefectures[id]) return;
     const { g, data } = activePrefectures[id];
@@ -175,6 +185,11 @@
     const pref = select.value;
     const region = Object.keys(PREFS).find(r=>PREFS[r].includes(pref));
     addPrefecture(region, pref);
+  });
+
+  // 一括削除
+  document.getElementById("clearBtn").addEventListener("click", ()=>{
+    clearAllPrefectures();
   });
 
 })();
