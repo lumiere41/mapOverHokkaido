@@ -3,18 +3,24 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>北海道ベース＋東京都（ドラッグ可 / 比率維持）</title>
+  <title>北海道＋関東切り替え地図</title>
   <style>
     body{margin:12px;font-family:system-ui,Meiryo,sans-serif}
     #stage{border:1px solid #ccc;width:100%;height:auto;background:#f7f9f8; touch-action:none;}
     #err{color:#a00;font-size:12px;margin-top:.5rem;display:none}
+    label, select { font-size:14px; margin:0 4px 12px 0; }
   </style>
   <script src="https://d3js.org/d3.v7.min.js" defer></script>
   <script src="./app.js" defer></script>
 </head>
 <body>
-  <h1 style="font-size:16px;margin:0 0 8px;">北海道ベース＋東京都（ドラッグのみ）</h1>
-  <svg id="stage" viewBox="0 0 900 650" aria-label="北海道と東京都"></svg>
+  <h1 style="font-size:16px;margin:0 0 8px;">北海道＋関東切り替え</h1>
+
+<label for="prefSelect">都道府県を選択:</label>
+<select id="prefSelect"></select>
+
+
+  <svg id="stage" viewBox="0 0 900 650" aria-label="北海道と関東"></svg>
   <p id="err"></p>
 </body>
 </html>
