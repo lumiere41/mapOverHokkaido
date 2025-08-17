@@ -14,9 +14,10 @@
 
 - [X（旧Twitter）でよく話題](https://x.com/kitazatosatuki/status/1956343008640856215)になる北海道の大きさを実感できない北海道民以外の方に向けて、地図で比較できるアプリを作ってみたいなと思い、chatGPT君と相談しながら作ってみました。
 
-<!-- ## デモURL
+---
+## デモURL
 
-👉 [GitHub Pages 公開版](https://lumiere41.github.io/mapOverHokkaido/) -->
+👉 [GitHub Pages 公開版](https://lumiere41.github.io/mapOverHokkaido/)
 
 ---
 
@@ -88,9 +89,11 @@ split_prefectures_short.py  # 全国データを分割するスクリプト（�
 ---
 
 ## 今後の展望
+- 画像ダウンロード機能の実装
 - 北海道以南の地図上に北海道をかぶせて表示できる全国地図版の作成
 - スマホ用の最適化
 
 ## 作者
 
 * 作成者: lumiere41
+[Ｘのアカウント](https://x.com/lumDesign00)
