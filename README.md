@@ -1,21 +1,23 @@
 # mapOverHokkaido ～北海道に自分の県を重ねてみよう～
 ＊本リポジトリは公開専用です。Pull Request や Issue の受付は行っていません。
 
-こんにちは、道産子のlumiere41です。
+- こんにちは、道産子のlumiere41です。
 「mapOverHokkaido」は、北海道の地図の上に自分の県を重ねて、
 北海道の大きさを直感的に比較できるブラウザアプリケーションです。
-* こちらのサイトの北海道対他県比較版のようなものです。参考出展：  [『The True Size Of …』](https://thetruesize.com/#?borders=1~!MTUwODI3NzA.MjU4OTMxNg*MzIwMTQxMTY(NzM4NzE2Mw~!CONTIGUOUS_US*MTAwMjQwNzU.MjUwMjM1MTc(MTc1)MQ~!IN*NTI2NDA1MQ.Nzg2MzQyMQ)Mg~!CN*OTkyMTY5Nw.NzMxNDcwNQ(MjI1)Mw)
-元データは [国土数値情報（国土交通省）](https://nlftp.mlit.go.jp/ksj/) を利用しています。
-
-[X（旧Twitter）でよく話題](https://x.com/kitazatosatuki/status/1956343008640856215)になる北海道の大きさを実感できない北海道民以外の方に向けて、地図で比較できるアプリを作ってみたいなと思い、chatGPT君と相談しながら作ってみました。
-
 ![screenshot](./thumb.png)
+
+- * こちらのサイトの北海道対他県比較版のようなものです。
+- 参考出展：  [『The True Size Of …』](https://thetruesize.com/#?borders=1~!MTUwODI3NzA.MjU4OTMxNg*MzIwMTQxMTY(NzM4NzE2Mw~!CONTIGUOUS_US*MTAwMjQwNzU.MjUwMjM1MTc(MTc1)MQ~!IN*NTI2NDA1MQ.Nzg2MzQyMQ)Mg~!CN*OTkyMTY5Nw.NzMxNDcwNQ(MjI1)Mw)
+
+- 元データは [国土数値情報（国土交通省）](https://nlftp.mlit.go.jp/ksj/) を利用しています。
+
+-[X（旧Twitter）でよく話題](https://x.com/kitazatosatuki/status/1956343008640856215)になる北海道の大きさを実感できない北海道民以外の方に向けて、地図で比較できるアプリを作ってみたいなと思い、chatGPT君と相談しながら作ってみました。
 
 ---
 
-## デモURL
+<!-- ## デモURL
 
-👉 [GitHub Pages 公開版](https://lumiere41.github.io/mapOverHokkaido/)
+👉 [GitHub Pages 公開版](https://lumiere41.github.io/mapOverHokkaido/) -->
 
 ---
 
@@ -40,12 +42,12 @@
 ## ライセンス
 
 ### データ
-本アプリで使用している地図データは  
+- 本アプリで使用している地図データは  
 [dataofjapan/land](https://github.com/dataofjapan/land) に公開されている日本の行政区域 GeoJSON を元に、都道府県ごとに分割したものです。  
-元データは [国土数値情報（国土交通省）](https://nlftp.mlit.go.jp/ksj/) を利用しています。  
-データライセンスは [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/deed.ja) に従います。
+- 元データは [国土数値情報（国土交通省）](https://nlftp.mlit.go.jp/ksj/) を利用しています。  
+- データライセンスは [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/deed.ja) に従います。
 
-### コード
+### 使用範囲
 - 勉強・趣味・個人利用の範囲であれば、自由に利用・改変できます。  
 - 他のソースコードへの転用も構いませんが、**本プロジェクトとほぼ同一の内容を、名前を変えただけ・色を変えただけ、など数行程度の改変のみで公開することはご遠慮ください。**  
 - 公開する場合は、大きな機能追加や独自性のある変更を加えた上で、別プロジェクトとして発信してください。 その際に、申請・利用報告等は不要です。
@@ -61,7 +63,7 @@
 ### ローカルでの実行方法
 
 ```bash
-git clone https://github.com/USERNAME/mapOverHokkaido.git
+git clone https://github.com/lumiere41/mapOverHokkaido.git
 cd mapOverHokkaido
 # ブラウザで index.html を開くだけで動作します
 ```
@@ -87,8 +89,8 @@ split_prefectures_short.py  # 全国データを分割するスクリプト（�
 ---
 
 ## 今後の展望
-- 
 - 北海道以南の地図上に北海道をかぶせて表示できる全国地図版の作成
+- スマホ用の最適化
 
 ## 作者
 
